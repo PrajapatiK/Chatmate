@@ -1,5 +1,5 @@
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -8,6 +8,9 @@ import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
+
+  const [typingMessage, setTypingMessage] = useState('');
+
   const {
     messages,
     getMessages,
@@ -18,14 +21,28 @@ const ChatContainer = () => {
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+  const socket = useAuthStore.getState().socket;
 
   useEffect(() => {
-    getMessages(selectedUser._id);
+    // Listen for "typing" events
+    socket.on('typing', () => {
+      setTypingMessage('User is typing...');
+    });
 
+    // Listen for "stopTyping" events
+    socket.on('stopTyping', () => {
+      setTypingMessage('');
+    });
+
+    getMessages(selectedUser._id);
     subscribeToMessages();
 
-    return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+    return () => {
+      unsubscribeFromMessages();
+      socket.off('typing');
+      socket.off('stopTyping');
+    }
+  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages, authUser?.fullName, socket]);
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
@@ -42,7 +59,7 @@ const ChatContainer = () => {
       </div>
     );
   }
-
+  
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       <ChatHeader />
@@ -85,7 +102,7 @@ const ChatContainer = () => {
         ))}
       </div>
 
-      <MessageInput />
+      <MessageInput typingMessage={typingMessage} selectedUser={selectedUser} />
     </div>
   );
 };

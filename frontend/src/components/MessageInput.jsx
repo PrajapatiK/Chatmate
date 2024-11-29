@@ -2,12 +2,33 @@ import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { Image, Send, X } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../store/useAuthStore";
+import ChatBubble from "./ChatBubble";
 
-const MessageInput = () => {
+const MessageInput = ({ typingMessage, selectedUser }) => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [typing, setTyping] = useState(false);
+
   const fileInputRef = useRef(null);
   const { sendMessage } = useChatStore();
+  const socket = useAuthStore.getState().socket;
+
+  const handleInputChange = async (e) => {
+    setText(e.target.value);
+    // Emit "typing" event when the user starts typing
+    if (!typing) {
+      setTyping(true);
+      // console.log(socket);
+      socket.emit('typing', { id: selectedUser._id });
+    }
+
+    // Stop typing after a short delay of inactivity
+    setTimeout(async () => {
+      setTyping(false);
+      socket.emit('stopTyping', { id: selectedUser._id });
+    }, 1000);
+  }
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -37,6 +58,9 @@ const MessageInput = () => {
         text: text.trim(),
         image: imagePreview,
       });
+      // Stop typing and send the message
+      socket.emit('stopTyping', { id: selectedUser._id });
+      setTyping(false);
 
       // Clear form
       setText("");
@@ -69,6 +93,7 @@ const MessageInput = () => {
         </div>
       )}
 
+      {typingMessage && <p className="mb-2"><ChatBubble /></p>}
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
         <div className="flex-1 flex gap-2">
           <input
@@ -76,7 +101,7 @@ const MessageInput = () => {
             className="w-full input input-bordered rounded-lg input-sm sm:input-md"
             placeholder="Type a message..."
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleInputChange}
           />
           <input
             type="file"

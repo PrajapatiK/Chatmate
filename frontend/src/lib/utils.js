@@ -5,3 +5,7 @@ export function formatMessageTime(date) {
     hour12: false,
   });
 }
+
+export function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
