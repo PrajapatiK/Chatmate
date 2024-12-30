@@ -1,29 +1,43 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
+import { hash } from "bcrypt";
 
-const userSchema = new mongoose.Schema(
-  {
-    email: {
+const userSchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  bio: {
+    type: String,
+    required: true,
+  },
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+    select: false,
+  },
+  avatar: {
+    public_id: {
       type: String,
       required: true,
-      unique: true,
     },
-    fullName: {
+    url: {
       type: String,
       required: true,
-    },
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-    },
-    profilePic: {
-      type: String,
-      default: "",
     },
   },
+},
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
 
-export default User;
+  this.password = await hash(this.password, 10);
+});
+
+export const User = mongoose.models.User || model("User", userSchema);

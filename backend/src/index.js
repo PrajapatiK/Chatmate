@@ -7,28 +7,36 @@ import path from "path";
 
 import { connectDB } from "./lib/db.js";
 
-import authRoutes from "./routes/auth.route.js";
-import messageRoutes from "./routes/message.route.js";
+// import authRoutes from "./routes/auth.route.js";
+// import messageRoutes from "./routes/message.route.js";
 import { app, server } from "./lib/socket.js";
+import envConfig from "./config/env.config.js";
+import { errorMiddleware } from "./middleware/error.middleware.js";
+import { corsOptions } from "./config/cors.config.js";
+
+import userRoute from "./routes/user.route.js";
+import chatRoute from "./routes/chat.route.js";
+import adminRoute from "./routes/admin.route.js";
 
 dotenv.config();
 
-const PORT = process.env.PORT;
+const PORT = envConfig.PORT;
 const __dirname = path.resolve();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 
-app.use("/api/auth", authRoutes);
-app.use("/api/messages", messageRoutes);
+// app.use("/api/auth", authRoutes);
+// app.use("/api/messages", messageRoutes);
 
-if (process.env.NODE_ENV === "production") {
+app.use("/api/v1/user", userRoute);
+app.use("/api/v1/chat", chatRoute);
+app.use("/api/v1/admin", adminRoute);
+
+app.use(errorMiddleware);
+
+if (envConfig.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
   app.get("*", (req, res) => {
